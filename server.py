@@ -29,7 +29,9 @@ def handle_client(client_socket, client_address):
     try:
         # Step 1: Perform WebSocket handshake
         request = client_socket.recv(1024).decode('utf-8')
+        print(request)
         headers = parse_headers(request)
+        
         
         websocket_key = headers.get("Sec-WebSocket-Key")
         if not websocket_key:
@@ -68,7 +70,10 @@ def handle_client(client_socket, client_address):
                     clients_connected[client_id]["rooms"].append(room_id)
                     print(clients_connected)
 
-                    handle_room_join(message_serialized)
+                    members = handle_room_join(message_serialized)
+                    if message_serialized["roomId"] in rooms:
+                        for client in rooms[message_serialized["roomId"]]:
+                            send_websocket_message(clients_connected[client]["socket"], members)
                     print(f"User {author_id} joined room {room_id}")
 
                 elif message_serialized["type"] == 'message':
@@ -110,6 +115,7 @@ def parse_headers(request):
         if ": " in line:
             key, value = line.split(": ", 1)
             headers[key] = value
+    print(headers)
     return headers
 
 def decode_websocket_frame(frame):

@@ -68,12 +68,11 @@ def handle_client(client_socket, client_address):
                         rooms[room_id] = []
                     rooms[room_id].append(client_id)
                     clients_connected[client_id]["rooms"].append(room_id)
-                    print(clients_connected)
-
-                    members = handle_room_join(message_serialized)
+                    members, new_join = handle_room_join(message_serialized)
                     if message_serialized["roomId"] in rooms:
                         for client in rooms[message_serialized["roomId"]]:
                             send_websocket_message(clients_connected[client]["socket"], members)
+                            send_websocket_message(clients_connected[client]["socket"], new_join)
                     print(f"User {author_id} joined room {room_id}")
 
                 elif message_serialized["type"] == 'message':
@@ -89,7 +88,9 @@ def handle_client(client_socket, client_address):
                     author_id = message_serialized["authorId"]
                     if room_id in rooms:
                         rooms[room_id].remove(client_id)
-                        handle_client_leave(message_serialized)
+                        leaving_user = handle_client_leave(message_serialized)
+                        for client in rooms[room_id]:
+                            send_websocket_message(clients_connected[client]["socket"], leaving_user)
 
                 # Echo the message back to the client
                 # send_websocket_message(client_socket, message)

@@ -31,11 +31,33 @@ def handle_room_join(serialized_message):
         })
 
   
-    final_message = {
+    members_in_the_room = {
         "type": "members",
         "content": serialized_members}
-    print(final_message)
-    return  json.dumps(final_message)
+    
+
+    get_author = 'SELECT "name" FROM "User" WHERE "id" = %s;'
+    cursor.execute(get_author, (authorId,))
+    author = cursor.fetchone()
+    conn.commit()
+    createdAt = time.time()
+
+    rndid = str(uuid.uuid4())
+    new_join = json.dumps({
+        "id": rndid,
+        "authorId": authorId,
+        "roomId": roomId,
+        "content": "",
+        "type": "join",
+        "createdAt": createdAt,
+        "author": {
+            "name": author[0]
+        }
+    })
+    
+
+
+    return  json.dumps(members_in_the_room), new_join
 
     
 def handle_text_message(serialized_message):
@@ -73,3 +95,24 @@ def handle_client_leave(serialized_message):
     
     cursor.execute('UPDATE "User" SET "roomId" = NULL WHERE "id" = %s;', (authorId,))
     conn.commit()
+
+    get_author = 'SELECT "name" FROM "User" WHERE "id" = %s;'
+    cursor.execute(get_author, (authorId,))
+    author = cursor.fetchone()
+    conn.commit()
+    createdAt = time.time()
+
+    rndid = str(uuid.uuid4())
+    new_leave = json.dumps({
+        "id": rndid,
+        "authorId": authorId,
+        "roomId": roomId,
+        "content": "",
+        "type": "leave",
+        "createdAt": createdAt,
+        "author": {
+            "name": author[0]
+        }
+    })
+
+    return new_leave

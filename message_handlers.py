@@ -89,12 +89,28 @@ def handle_text_message(serialized_message):
     })
     return message
 
-def handle_client_leave(serialized_message):
-    authorId = serialized_message["authorId"]
-    roomId = serialized_message["roomId"]
+def handle_client_leave(authorId, roomId):
+    authorId = authorId
+    roomId = roomId
+
+
     
     cursor.execute('UPDATE "User" SET "roomId" = NULL WHERE "id" = %s;', (authorId,))
     conn.commit()
+
+
+    all_members_in_room = 'SELECT "name","email","id" FROM "User" WHERE "roomId" = %s;'
+    cursor.execute(all_members_in_room, (roomId,))
+    members = cursor.fetchall()
+    conn.commit()
+    serialized_members = []
+    
+    for member in members:
+        serialized_members.append({
+            "name": member[0],
+            "email": member[1],
+            "id": member[2]
+        })
 
     get_author = 'SELECT "name" FROM "User" WHERE "id" = %s;'
     cursor.execute(get_author, (authorId,))
@@ -115,4 +131,8 @@ def handle_client_leave(serialized_message):
         }
     })
 
-    return new_leave
+    members_in_the_room = {
+    "type": "members",
+    "content": serialized_members}
+
+    return json.dumps(members_in_the_room), new_leave

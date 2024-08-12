@@ -6,13 +6,14 @@ import struct
 import json
 from message_handlers import handle_room_join, handle_text_message, handle_client_leave
 
-
 # Constants
 MAGIC_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 # Global dictionaries to store the clients and rooms
 clients_connected = {}
+clientId_to_authorId = {}
 rooms = {}
+lock = threading.Lock()
 
 def create_websocket_accept_key(key):
     """Create a Sec-WebSocket-Accept key for the WebSocket handshake."""
@@ -22,16 +23,15 @@ def create_websocket_accept_key(key):
 
 def handle_client(client_socket, client_address):
     """Handles the WebSocket connection with a client."""
-
     client_id = client_address[1]  # Using port number as a unique client ID
-    clients_connected[client_id] = {"socket": client_socket, "rooms": []}
+
+    with lock:
+        clients_connected[client_id] = {"socket": client_socket, "rooms": []}
 
     try:
         # Step 1: Perform WebSocket handshake
         request = client_socket.recv(1024).decode('utf-8')
-        print(request)
         headers = parse_headers(request)
-        
         
         websocket_key = headers.get("Sec-WebSocket-Key")
         if not websocket_key:
@@ -56,7 +56,23 @@ def handle_client(client_socket, client_address):
             opcode, payload = decode_websocket_frame(frame)
             if opcode == 8:  # Close frame
                 print(f"Connection closed by client {client_id}")
+
+                # Inform all clients that a user left
+                with lock:
+                    if client_id in clients_connected:
+                        for room in clients_connected[client_id]["rooms"]:
+                            if room in rooms:
+                                rooms[room].remove(client_id)
+                                if not rooms[room]:  # Remove room if empty
+                                    del rooms[room]
+                                authorId = clientId_to_authorId.get(client_id)
+                                members, leaving_user = handle_client_leave(authorId, room)
+                                for client in rooms.get(room, []):
+                                    send_websocket_message(clients_connected[client]["socket"], leaving_user)
+                                    send_websocket_message(clients_connected[client]["socket"], members)
+                        del clients_connected[client_id]
                 break
+
             if opcode == 1:  # Text frame
                 message = payload.decode('utf-8')
                 message_serialized = json.loads(message)
@@ -64,48 +80,50 @@ def handle_client(client_socket, client_address):
                 if message_serialized["type"] == 'join':
                     room_id = message_serialized["roomId"]
                     author_id = message_serialized["authorId"]
-                    if room_id not in rooms:
-                        rooms[room_id] = []
-                    rooms[room_id].append(client_id)
-                    clients_connected[client_id]["rooms"].append(room_id)
+
+                    with lock:
+                        if room_id not in rooms:
+                            rooms[room_id] = []
+                        rooms[room_id].append(client_id)
+                        clients_connected[client_id]["rooms"].append(room_id)
+                        clientId_to_authorId[client_id] = author_id
+
                     members, new_join = handle_room_join(message_serialized)
-                    if message_serialized["roomId"] in rooms:
-                        for client in rooms[message_serialized["roomId"]]:
+                    with lock:
+                        for client in rooms.get(room_id, []):
                             send_websocket_message(clients_connected[client]["socket"], members)
                             send_websocket_message(clients_connected[client]["socket"], new_join)
-                    print(f"User {author_id} joined room {room_id}")
 
                 elif message_serialized["type"] == 'message':
                     new_message = handle_text_message(message_serialized)
 
-                    if message_serialized["roomId"] in rooms:
-                        for client in rooms[message_serialized["roomId"]]:
+                    with lock:
+                        for client in rooms.get(message_serialized["roomId"], []):
                             send_websocket_message(clients_connected[client]["socket"], new_message)
-                    print(f"Message sent to room {message_serialized['roomId']}")
 
                 elif message_serialized["type"] == 'leave':
                     room_id = message_serialized["roomId"]
                     author_id = message_serialized["authorId"]
-                    if room_id in rooms:
-                        rooms[room_id].remove(client_id)
-                        leaving_user = handle_client_leave(message_serialized)
-                        for client in rooms[room_id]:
-                            send_websocket_message(clients_connected[client]["socket"], leaving_user)
 
-                # Echo the message back to the client
-                # send_websocket_message(client_socket, message)
+                    with lock:
+                        if room_id in rooms:
+                            rooms[room_id].remove(client_id)
+                            leaving_user = handle_client_leave(author_id, room_id)
+                            for client in rooms.get(room_id, []):
+                                send_websocket_message(clients_connected[client]["socket"], leaving_user)
 
     except Exception as e:
         print(f"Error: {e}")
     finally:
         # Clean up client and rooms on disconnect
-        if client_id in clients_connected:
-            for room in clients_connected[client_id]["rooms"]:
-                if room in rooms:
-                    rooms[room].remove(client_id)
-                    if not rooms[room]:  # Remove room if empty
-                        del rooms[room]
-            del clients_connected[client_id]
+        with lock:
+            if client_id in clients_connected:
+                for room in clients_connected[client_id]["rooms"]:
+                    if room in rooms:
+                        rooms[room].remove(client_id)
+                        if not rooms[room]:  # Remove room if empty
+                            del rooms[room]
+                del clients_connected[client_id]
         client_socket.close()
 
 def parse_headers(request):
@@ -116,7 +134,6 @@ def parse_headers(request):
         if ": " in line:
             key, value = line.split(": ", 1)
             headers[key] = value
-    print(headers)
     return headers
 
 def decode_websocket_frame(frame):
@@ -184,21 +201,3 @@ def run_server(host='0.0.0.0', port=8080):
 
 if __name__ == "__main__":
     run_server()
-
-#create connection with room
-"""
-roomId
-authorId: userId
-type: join
-content: null
-"""
-
-
-"""
-type: message
-content:
-authorId:userId
-roomId 
-"""
-
-

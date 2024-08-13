@@ -5,6 +5,7 @@ import base64
 import struct
 import json
 from message_handlers import handle_room_join, handle_text_message, handle_client_leave
+import os
 
 # Constants
 MAGIC_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -47,7 +48,7 @@ def handle_client(client_socket, client_address):
             f"Sec-WebSocket-Accept: {accept_key}\r\n\r\n"
         )
         client_socket.sendall(handshake_response.encode('utf-8'))
-
+        
         # Step 2: Receive and handle WebSocket frames
         while True:
             frame = client_socket.recv(1024)
@@ -76,24 +77,26 @@ def handle_client(client_socket, client_address):
             if opcode == 1:  # Text frame
                 message = payload.decode('utf-8')
                 message_serialized = json.loads(message)
-
+                
                 if message_serialized["type"] == 'join':
                     room_id = message_serialized["roomId"]
                     author_id = message_serialized["authorId"]
-
+                   
                     with lock:
                         if room_id not in rooms:
                             rooms[room_id] = []
+                        
                         rooms[room_id].append(client_id)
                         clients_connected[client_id]["rooms"].append(room_id)
                         clientId_to_authorId[client_id] = author_id
-
                     members, new_join = handle_room_join(message_serialized)
+                    
                     with lock:
+                        
                         for client in rooms.get(room_id, []):
+                          
                             send_websocket_message(clients_connected[client]["socket"], members)
                             send_websocket_message(clients_connected[client]["socket"], new_join)
-
                 elif message_serialized["type"] == 'message':
                     new_message = handle_text_message(message_serialized)
 
@@ -200,4 +203,6 @@ def run_server(host='0.0.0.0', port=8080):
         server_socket.close()
 
 if __name__ == "__main__":
-    run_server()
+    host = os.getenv('SERVER_HOST', '0.0.0.0')
+    port = os.getenv('SERVER_PORT', 8080)
+    run_server(host,port)

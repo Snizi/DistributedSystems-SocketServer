@@ -1,0 +1,20 @@
+# Nome do banco de dados
+DB_NAME=
+
+# Usuário do banco de dados
+DB_USER=
+
+# Senha do banco de dados
+DB_PASSWORD=
+
+# Host do banco de dados
+DB_HOST=
+
+# Porta do banco de dados
+DB_PORT=
+
+# Host do servidor WebSocket
+SERVER_HOST=
+
+# Porta do servidor WebSocket
+SERVER_PORT=

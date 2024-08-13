@@ -2,46 +2,52 @@
 
 ## WebSocket Chat Server
 
-### Overview
-This project is a WebSocket-based chat server that allows clients to join chat rooms, send messages, and leave rooms. The server is capable of handling multiple clients simultaneously, enabling real-time communication within different chat rooms. The project is built using Python and employs threading for concurrent client management. It also integrates with a PostgreSQL database to manage users and messages.
+### Visão Geral
 
-### Features
-- **WebSocket Handshake**: Handles WebSocket handshake to establish a connection with clients.
-- **Room Management**: Allows users to join and leave chat rooms, and keeps track of which clients are in which rooms.
-- **Message Broadcasting**: Broadcasts messages to all clients in a room.
-- **Database Integration**: Stores user and message data in a PostgreSQL database.
-- **Threaded Client Handling**: Manages multiple client connections simultaneously using threads.
+Este projeto é um servidor de chat baseado em WebSocket que permite aos clientes entrarem em salas de chat, enviarem mensagens e saírem das salas. O servidor é capaz de gerenciar vários clientes simultaneamente, possibilitando comunicação em tempo real dentro de diferentes salas de chat. O projeto é construído usando Python e utiliza threads para o gerenciamento concorrente de clientes. Ele também se integra a um banco de dados PostgreSQL para gerenciar usuários e mensagens.
 
-### Project Structure
-- **main.py**: The main server script. Handles client connections, WebSocket handshakes, message routing, and room management.
-- **message_handlers.py**: Contains functions that interact with the PostgreSQL database to manage users, rooms, and messages.
+### Recursos
 
-### Setup and Installation
+- **Handshake WebSocket**: Gerencia o handshake WebSocket para estabelecer uma conexão com os clientes.
+- **Gerenciamento de Salas**: Permite que os usuários entrem e saiam de salas de chat e mantém o controle sobre quais clientes estão em quais salas.
+- **Broadcast de Mensagens**: Transmite mensagens para todos os clientes em uma sala.
+- **Integração com Banco de Dados**: Armazena dados de usuários e mensagens em um banco de dados PostgreSQL.
+- **Gerenciamento de Clientes em Threads**: Gerencia múltiplas conexões de clientes simultaneamente usando threads.
 
-#### Prerequisites
+### Estrutura do Projeto
+
+- **main.py**: O script principal do servidor. Gerencia conexões de clientes, handshakes WebSocket, roteamento de mensagens e gerenciamento de salas.
+- **message_handlers.py**: Contém funções que interagem com o banco de dados PostgreSQL para gerenciar usuários, salas e mensagens.
+
+### Configuração e Instalação
+
+#### Pré-requisitos
+
 - Python 3.x
 - PostgreSQL
 
-#### Installation Steps
-1. **Clone the repository**:
-    ```bash
-    git clone https://github.com/Snizi/DistributedSystems-SocketServer
-    cd https://github.com/Snizi/DistributedSystems-SocketServer
-    ```
+#### Passos de Instalação
 
-2. **Install dependencies**:
-    Ensure you have all required Python packages installed:
-    ```bash
-    pip install -r requirements.txt
-    ```
+1. **Clone o repositório:**:
 
-3. **Set up PostgreSQL Database**:
-    - Create a PostgreSQL database.
-    - Update the `connect()` function in `message_handlers.py` with your database credentials.
-    - Initialize your database schema (tables for Users and Messages).
+   ```bash
+   git clone https://github.com/Snizi/DistributedSystems-SocketServer
+   cd https://github.com/Snizi/DistributedSystems-SocketServer
+   ```
+
+2. **Instale as dependências**:
+   Certifique-se de ter todos os pacotes Python necessários instalados:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Preencha as variáveis de ambiente**:
+
+Baseado no .env example
 
 4. **Run the server**:
-    ```bash
-    python main.py
-    ```
-    The server will start running on `ws://0.0.0.0:8080`.
+   ```bash
+   python main.py
+   ```
+   The server will start running on `ws://0.0.0.0:8080`.

@@ -2,26 +2,44 @@ import psycopg2
 import uuid
 import json
 import time
-
+import os
 def connect():
-    conn = psycopg2.connect(database="chat-distribuidos", user="admin", password="admin", host="127.0.0.1", port="5433")
+    
+      # Importando as variáveis de ambiente
+    db_name = os.getenv('DB_NAME', 'chat-distribuidos')
+    db_user = os.getenv('DB_USER', 'admin')
+    db_password = os.getenv('DB_PASSWORD', 'admin')
+    db_host = os.getenv('DB_HOST', '127.0.0.1')
+    db_port = os.getenv('DB_PORT', '5432')
+    
+    # Conectando ao banco de dados
+    conn = psycopg2.connect(
+        database=db_name,
+        user=db_user,
+        password=db_password,
+        host=db_host,
+        port=db_port
+    )
     return conn
 
 conn = connect()
 cursor = conn.cursor()
 
 def handle_room_join(serialized_message):
+    
     authorId = serialized_message["authorId"]
     roomId = serialized_message["roomId"]
-    
+   
     cursor.execute('UPDATE "User" SET "roomId" = %s WHERE "id" = %s;', (roomId, authorId))
     conn.commit()
-
+    
     all_members_in_room = 'SELECT "name","email","id" FROM "User" WHERE "roomId" = %s;'
+ 
     cursor.execute(all_members_in_room, (roomId,))
     members = cursor.fetchall()
     conn.commit()
     serialized_members = []
+  
     
     for member in members:
         serialized_members.append({
@@ -30,19 +48,20 @@ def handle_room_join(serialized_message):
             "id": member[2]
         })
 
-  
+    
     members_in_the_room = {
         "type": "members",
         "content": serialized_members}
     
-
     get_author = 'SELECT "name" FROM "User" WHERE "id" = %s;'
     cursor.execute(get_author, (authorId,))
     author = cursor.fetchone()
+    print(author)
     conn.commit()
     createdAt = time.time()
-
+    
     rndid = str(uuid.uuid4())
+    print("aqu4")
     new_join = json.dumps({
         "id": rndid,
         "authorId": authorId,
@@ -54,6 +73,7 @@ def handle_room_join(serialized_message):
             "name": author[0]
         }
     })
+    print("aqu4")
     
 
 
